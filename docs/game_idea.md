@@ -26,3 +26,16 @@ Players must weigh their choices carefully since:
 - Resources/health are limited
 - Door choices may have visual hints or be completely unknown
 - Cumulative effects matter for survival
+
+## Door Bosses
+Undertale-inspired boss encounters where:
+- Doors attack the player directly
+- Player must dodge incoming door projectiles/patterns
+- Survival-based combat (dodge, don't attack)
+- ASCII patterns flying at the player
+
+## Keys and Locked Doors
+- Some doors are locked and require keys to open
+- Keys found in certain rooms or as rewards
+- Locked doors may hide better rewards (risk/reward)
+- Creates resource management decisions (use key now or save it?)
