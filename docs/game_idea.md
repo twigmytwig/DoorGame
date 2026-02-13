@@ -39,3 +39,7 @@ Undertale-inspired boss encounters where:
 - Keys found in certain rooms or as rewards
 - Locked doors may hide better rewards (risk/reward)
 - Creates resource management decisions (use key now or save it?)
+
+## Audio
+- Each door has a unique creaking sound when opened
+- Different door types have distinct creaking voices/personalities

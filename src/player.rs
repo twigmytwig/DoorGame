@@ -1,7 +1,9 @@
 use bevy::prelude::*;
+use crate::state::GameState;
+use crate::hitbox::HitBox;
 
 #[derive(Component)]
-struct Player;
+pub struct Player;
 
 fn spawn_player(mut commands: Commands){
     commands.spawn((
@@ -14,6 +16,7 @@ fn spawn_player(mut commands: Commands){
         TextColor(Color::WHITE),
         Transform::from_translation(Vec3::ZERO),
         Player,
+        HitBox{width: 24.0,height: 24.0}
     ));
 }
 
@@ -48,7 +51,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_player)
+        app.add_systems(OnEnter(GameState::StartGame), spawn_player)
             .add_systems(Update, move_player);
     }
 }
