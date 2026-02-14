@@ -7,6 +7,8 @@ mod state;
 mod hitbox;
 mod wall;
 mod level;
+mod camera;
+use crate::camera::CameraPlugin;
 use crate::door::DoorPlugin;
 use crate::player::PlayerPlugin;
 use crate::roaming::RoamingPlugin;
@@ -17,8 +19,8 @@ use crate::level::LevelPlugin;
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
-    .add_systems(Startup, setup_camera)
     .add_plugins(state::StatePlugin)
+    .add_plugins(CameraPlugin)
     .add_plugins(HitBoxPlugin)
     .add_plugins(WallPlugin)
     .add_plugins(LevelPlugin)
@@ -26,8 +28,4 @@ fn main() {
     .add_plugins(DoorPlugin)
     .add_plugins(RoamingPlugin)
     .run();
-}
-
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
 }
