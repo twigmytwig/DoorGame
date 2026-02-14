@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use crate::player::Player;
 use crate::state::GameState;
+use crate::helpers::lerp;
 
+const LERP_VAL: f32 = 0.1;
 #[derive(Component)]
 pub struct GameCamera;
 
@@ -19,8 +21,8 @@ fn follow_player(
     let Ok(player_transform) = player_query.single() else { return; };
     let Ok(mut camera_transform) = camera_query.single_mut() else { return; };
 
-    camera_transform.translation.x = player_transform.translation.x;
-    camera_transform.translation.y = player_transform.translation.y;
+    camera_transform.translation.x = lerp(camera_transform.translation.x, player_transform.translation.x, LERP_VAL);
+    camera_transform.translation.y = lerp(camera_transform.translation.y, player_transform.translation.y, LERP_VAL);
 }
 
 pub struct CameraPlugin;

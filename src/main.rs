@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 mod art;
+mod helpers;
 mod player;
 mod door;
 mod roaming;
