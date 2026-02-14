@@ -5,10 +5,14 @@ mod door;
 mod roaming;
 mod state;
 mod hitbox;
+mod wall;
+mod level;
 use crate::door::DoorPlugin;
 use crate::player::PlayerPlugin;
 use crate::roaming::RoamingPlugin;
 use crate::hitbox::HitBoxPlugin;
+use crate::wall::WallPlugin;
+use crate::level::LevelPlugin;
 
 fn main() {
     App::new()
@@ -16,6 +20,8 @@ fn main() {
     .add_systems(Startup, setup_camera)
     .add_plugins(state::StatePlugin)
     .add_plugins(HitBoxPlugin)
+    .add_plugins(WallPlugin)
+    .add_plugins(LevelPlugin)
     .add_plugins(PlayerPlugin)
     .add_plugins(DoorPlugin)
     .add_plugins(RoamingPlugin)

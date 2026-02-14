@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use crate::art::DOOR_ART;
-use crate::roaming::Roam;
 use crate::state::GameState;
 use crate::hitbox::{HitBox, PlayerTouchedSomething};
 
@@ -11,12 +10,12 @@ fn spawn_door(mut commands: Commands){
     commands.spawn((
         Text2d::new(DOOR_ART),
         TextFont{
-            font_size: 12.0,
+            font_size: 6.0,
             font: default(),
             ..default()
         },
         TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::ZERO),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
         Door,
         HitBox { width: 80.0, height: 120.0 },
     ));
@@ -29,7 +28,6 @@ fn handle_door_touch(
     for message in messages.read() {
         if doors.get(message.messaging_entity).is_ok() {
             info!("Door collision!");
-
         }
     }
 }

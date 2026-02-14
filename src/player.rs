@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::state::GameState;
 use crate::hitbox::HitBox;
+use crate::wall::Wall;
 
 #[derive(Component)]
 pub struct Player;
@@ -14,7 +15,7 @@ fn spawn_player(mut commands: Commands){
             ..default()
         },
         TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::ZERO),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         Player,
         HitBox{width: 24.0,height: 24.0}
     ));
@@ -23,8 +24,11 @@ fn spawn_player(mut commands: Commands){
 fn move_player(
     input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut player_transform: Single<&mut Transform, With<Player>>,
+    mut player_query: Single<(&mut Transform, &HitBox), With<Player>>,
+    walls: Query<(&Transform, &HitBox), (With<Wall>, Without<Player>)>,
 ){
+    let (ref mut player_transform, player_hitbox) = *player_query;
+
     let mut direction = Vec2::ZERO;
     if input.pressed(KeyCode::ArrowLeft){
         direction.x -= 1.0;
@@ -42,8 +46,28 @@ fn move_player(
     if direction != Vec2::ZERO{
         let speed = 300.0;
         let delta = direction.normalize() * speed * time.delta_secs();
-        player_transform.translation.x += delta.x;
-        player_transform.translation.y += delta.y;
+        let desired_pos = Vec2::new(
+            player_transform.translation.x + delta.x,
+            player_transform.translation.y + delta.y,
+        );
+
+        let mut blocked = false;
+        for (wall_transform, wall_hitbox) in &walls {
+            let overlap_x = (desired_pos.x - wall_transform.translation.x).abs()
+                < (player_hitbox.width + wall_hitbox.width) / 2.0;
+            let overlap_y = (desired_pos.y - wall_transform.translation.y).abs()
+                < (player_hitbox.height + wall_hitbox.height) / 2.0;
+
+            if overlap_x && overlap_y {
+                blocked = true;
+                break;
+            }
+        }
+
+        if !blocked {
+            player_transform.translation.x = desired_pos.x;
+            player_transform.translation.y = desired_pos.y;
+        }
     }
 }
 
