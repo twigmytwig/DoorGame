@@ -158,7 +158,7 @@ spawn_level_from_data_internal()
 | `LevelDoor` | Door with `leads_to` field for next level |
 | `LevelEntity` | Marks entities to despawn on level transition |
 | `HitBox` | Collision bounds (width, height) |
-| `Roam` | Enables random roaming behavior |
+| `Roam` | Enables roaming behavior (speed, range) |
 
 ## RON Level Format
 
@@ -178,11 +178,41 @@ spawn_level_from_data_internal()
             label: "Left Door",
             locked: false,
         ),
+        (
+            position: (200.0, 200.0),
+            leads_to: "level_03",
+            label: "Wandering Door",
+            locked: false,
+            extra: [Roam(speed: 30.0, range: 100.0)],  // Door moves!
+        ),
     ],
     boss: None,
     items: [],
 )
 ```
+
+## EntityComponent System
+
+Doors (and potentially other entities) can have extra components added via the `extra` field in RON:
+
+```rust
+// Defined in level_schema.rs
+pub enum EntityComponent {
+    Roam { speed: f32, range: f32 },
+    // Add more variants as needed
+}
+```
+
+**How it works:**
+1. RON file defines `extra: [Roam(speed: 30.0, range: 100.0)]`
+2. `spawn_door_from_data()` spawns the door entity
+3. Loops through `extra`, matches on each `EntityComponent`
+4. Inserts the corresponding Bevy component via `commands.entity(id).insert(...)`
+
+**Adding new behaviors:**
+1. Add variant to `EntityComponent` enum in `level_schema.rs`
+2. Add match arm in `spawn_door_from_data()` in `level.rs`
+3. Use it in RON files
 
 ## Shutdown
 

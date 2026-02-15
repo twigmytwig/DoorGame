@@ -34,6 +34,17 @@ pub struct DoorData {
     pub locked: bool,
     #[serde(default)]
     pub key_required: Option<String>,
+    #[serde(default)]
+    pub extra: Vec<EntityComponent>,
+}
+
+/// Extra components that can be attached to entities via RON
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EntityComponent {
+    Roam { speed: f32, range: f32 },
+    // Add more as needed:
+    // Creaky,
+    // Timed { delay: f32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

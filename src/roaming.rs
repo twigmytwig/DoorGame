@@ -2,8 +2,9 @@ use bevy::prelude::*;
 use crate::state::GameState;
 
 #[derive(Component)]
-pub struct Roam{
-    pub speed: f32
+pub struct Roam {
+    pub speed: f32,
+    pub range: f32,  // How far from origin it can roam (not yet implemented)
 }
 
 //When time passes, we choose random direction, and move in that direction

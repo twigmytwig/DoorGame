@@ -153,16 +153,31 @@ fn spawn_wall_at(commands: &mut Commands, pos: Vec3, size: f32) {
 
 fn spawn_door_from_data(commands: &mut Commands, door_data: &crate::level_schema::DoorData) {
     use crate::art::DOOR_ART;
+    use crate::level_schema::EntityComponent;
+    use crate::roaming::Roam;
 
-    commands.spawn((
+    let entity = commands.spawn((
         Text2d::new(DOOR_ART),
         TextFont { font_size: 6.0, ..default() },
         TextColor(Color::WHITE),
         Transform::from_translation(Vec3::new(door_data.position.0, door_data.position.1, 1.0)),
         LevelDoor { leads_to: door_data.leads_to.clone() },
         HitBox { width: 80.0, height: 120.0 },
-        LevelEntity
-    ));
+        LevelEntity,
+    )).id();
+
+    // Add extra components from RON data
+    for component in &door_data.extra {
+        match component {
+            EntityComponent::Roam { speed, range } => {
+                commands.entity(entity).insert(Roam {
+                    speed: *speed,
+                    range: *range,
+                });
+                info!("  + Roam (speed: {}, range: {})", speed, range);
+            }
+        }
+    }
 
     info!("Spawned door '{}' at ({}, {})", door_data.label, door_data.position.0, door_data.position.1);
 }
