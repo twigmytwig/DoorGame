@@ -29,8 +29,6 @@ impl Plugin for StatePlugin {
             .add_systems(OnExit(GameState::Loading),
                 loading::despawn_loading_screen)
 
-            // StartGame: level.rs handles asset loading and transitions to Playing/Dialogue
-
             // Dialogue state systems
             .add_systems(OnEnter(GameState::Dialogue), (
                 dialogue::reset_dialogue_state,
@@ -40,8 +38,15 @@ impl Plugin for StatePlugin {
             .add_systems(OnExit(GameState::Dialogue), dialogue::despawn_dialogue_panel)
 
             // LoadingNewLevel state systems
-            .add_systems(OnEnter(GameState::LoadingNewLevel), (loading_new_level::spawn_loading_new_level_screen, loading_new_level::despawn_level_entities))
-            .add_systems(Update, loading_new_level::animate_loading_room.run_if(in_state(GameState::LoadingNewLevel)))
+            .add_systems(OnEnter(GameState::LoadingNewLevel), (
+                loading_new_level::spawn_loading_new_level_screen,
+                loading_new_level::despawn_level_entities,
+                loading_new_level::start_loading_next_level,
+            ))
+            .add_systems(Update, (
+                loading_new_level::animate_loading_room,
+                loading_new_level::check_new_level_ready,
+            ).run_if(in_state(GameState::LoadingNewLevel)))
             .add_systems(OnExit(GameState::LoadingNewLevel), loading::despawn_loading_screen)
 
             // Pause state systems
@@ -63,7 +68,7 @@ fn check_assets_loaded(
     timer.0.tick(time.delta());
 
     if timer.0.is_finished() {
-        next_state.set(GameState::StartGame);
+        next_state.set(GameState::LoadingNewLevel);
     }
 }
 

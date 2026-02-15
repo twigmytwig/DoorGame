@@ -7,8 +7,8 @@ use mapgen::filter::{
 use bevy_common_assets::ron::RonAssetPlugin;
 use crate::hitbox::HitBox;
 use crate::wall::Wall;
-use crate::state::GameState;
 use crate::level_entity::LevelEntity;
+use crate::player::Player;
 use crate::level_schema::LevelData;
 
 const TILE_SIZE: f32 = 32.0;
@@ -34,7 +34,7 @@ pub struct CurrentLevel {
 impl Default for CurrentLevel {
     fn default() -> Self {
         Self {
-            level_id: "intro".to_string(),
+            level_id: "level_01_intro".to_string(),
             handle: Handle::default(),
             loaded: false,
         }
@@ -45,49 +45,8 @@ impl Default for CurrentLevel {
 #[derive(Resource, Default)]
 pub struct LoadedLevelData(pub Option<LevelData>);
 
-// Start loading a level
-fn start_loading_level(
-    mut current_level: ResMut<CurrentLevel>,
-    asset_server: Res<AssetServer>,
-) {
-    let path = format!("levels/level_01_{}.ron", current_level.level_id);
-    current_level.handle = asset_server.load(&path);
-    current_level.loaded = false;
-    info!("Loading level: {}", path);
-}
-
-// Check if level asset is loaded, then spawn and transition
-fn check_level_loaded(
-    mut commands: Commands,
-    mut current_level: ResMut<CurrentLevel>,
-    level_assets: Res<Assets<LevelData>>,
-    mut loaded_data: ResMut<LoadedLevelData>,
-    mut next_state: ResMut<NextState<GameState>>,
-    windows: Query<&Window>,
-) {
-    if current_level.loaded {
-        return;
-    }
-
-    if let Some(level_data) = level_assets.get(&current_level.handle) {
-        info!("Level loaded: {}", level_data.name);
-        loaded_data.0 = Some(level_data.clone());
-        current_level.loaded = true;
-
-        // Spawn the level now that data is loaded
-        spawn_level_from_data_internal(&mut commands, level_data, &windows);
-
-        // If there's dialogue, go to Dialogue state, otherwise Playing
-        if !level_data.dialogue.is_empty() {
-            next_state.set(GameState::Dialogue);
-        } else {
-            next_state.set(GameState::Playing);
-        }
-    }
-}
-
-// Internal function to spawn level from data (called after asset is confirmed loaded)
-fn spawn_level_from_data_internal(
+// Spawn level from data (called after asset is confirmed loaded)
+pub fn spawn_level_from_data_internal(
     commands: &mut Commands,
     level_data: &LevelData,
     windows: &Query<&Window>,
@@ -107,6 +66,19 @@ fn spawn_level_from_data_internal(
     for door_data in &level_data.doors {
         spawn_door_from_data(commands, door_data);
     }
+
+    // Spawn player at level's start position
+    let start_pos = Vec3::new(level_data.player_start.0, level_data.player_start.1, 2.0);
+    commands.spawn((
+        Text2d::new("@"),
+        TextFont { font_size: 24.0, ..default() },
+        TextColor(Color::WHITE),
+        Transform::from_translation(start_pos),
+        Player,
+        LevelEntity,
+        HitBox { width: 24.0, height: 24.0 },
+    ));
+    info!("Spawned player at ({}, {})", level_data.player_start.0, level_data.player_start.1);
 }
 
 fn spawn_border_walls_internal(commands: &mut Commands, windows: &Query<&Window>) {
@@ -189,7 +161,7 @@ fn spawn_door_from_data(commands: &mut Commands, door_data: &crate::level_schema
         Transform::from_translation(Vec3::new(door_data.position.0, door_data.position.1, 1.0)),
         LevelDoor { leads_to: door_data.leads_to.clone() },
         HitBox { width: 80.0, height: 120.0 },
-        LevelEntity,
+        LevelEntity
     ));
 
     info!("Spawned door '{}' at ({}, {})", door_data.label, door_data.position.0, door_data.position.1);
@@ -201,8 +173,7 @@ impl Plugin for LevelPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(RonAssetPlugin::<LevelData>::new(&["ron"]))
            .init_resource::<CurrentLevel>()
-           .init_resource::<LoadedLevelData>()
-           .add_systems(OnEnter(GameState::StartGame), start_loading_level)
-           .add_systems(Update, check_level_loaded.run_if(in_state(GameState::StartGame)));
+           .init_resource::<LoadedLevelData>();
+        // Level loading and spawning is handled by loading_new_level.rs
     }
 }

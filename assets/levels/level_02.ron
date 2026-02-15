@@ -9,23 +9,23 @@
 
     // Dialogue plays when entering the room (optional - omit or empty for no dialogue)
     dialogue: [
-        (speaker: "???", text: "You awaken in a dimly lit room."),
-        (speaker: "???", text: "Two doors stand before you."),
-        (speaker: "???", text: "Choose... but choose wisely."),
+        (speaker: "???", text: "test."),
+        (speaker: "???", text: "test."),
+        (speaker: "???", text: "test."),
     ],
 
     // Doors in this room
     doors: [
         (
-            position: (-200.0, 200.0),
-            leads_to: "level_02",
+            position: (-300.0, 100.0),
+            leads_to: "level_01_intro",
             label: "Left Door",
             locked: false,
             key_required: None,
         ),
         (
-            position: (200.0, 200.0),
-            leads_to: "level_02",
+            position: (400.0, 50.0),
+            leads_to: "level_01_intro",
             label: "Right Door",
             locked: false,
             key_required: None,

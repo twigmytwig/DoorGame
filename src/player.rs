@@ -6,21 +6,6 @@ use crate::wall::Wall;
 #[derive(Component)]
 pub struct Player;
 
-fn spawn_player(mut commands: Commands){
-    commands.spawn((
-        Text2d::new("@"),
-        TextFont{
-            font_size: 24.0,
-            font: default(),
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
-        Player,
-        HitBox{width: 24.0,height: 24.0}
-    ));
-}
-
 fn move_player(
     input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -75,7 +60,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::StartGame), spawn_player)
-            .add_systems(Update, move_player.run_if(in_state(GameState::Playing)));
+        // Player is spawned by level.rs from RON data (player_start)
+        app.add_systems(Update, move_player.run_if(in_state(GameState::Playing)));
     }
 }

@@ -1,36 +1,23 @@
 use bevy::prelude::*;
-use crate::art::DOOR_ART;
 use crate::state::GameState;
-use crate::hitbox::{HitBox, PlayerTouchedSomething};
-use crate::level_entity::LevelEntity;
-
-#[derive(Component)]
-struct Door;
-
-fn spawn_door(mut commands: Commands){
-    commands.spawn((
-        Text2d::new(DOOR_ART),
-        TextFont{
-            font_size: 6.0,
-            font: default(),
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::new(400.0, 400.0, 1.0)),
-        Door,
-        LevelEntity,
-        HitBox { width: 80.0, height: 120.0 },
-    ));
-}
+use crate::hitbox::PlayerTouchedSomething;
+use crate::level::{LevelDoor, CurrentLevel};
 
 fn handle_door_touch(
     mut messages: MessageReader<PlayerTouchedSomething>,
-    doors: Query<(), With<Door>>,
+    doors: Query<&LevelDoor>,
+    mut current_level: ResMut<CurrentLevel>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for message in messages.read() {
-        if doors.get(message.messaging_entity).is_ok() {
-            info!("Door hit!");
+        // Try to get the LevelDoor component from the touched entity
+        if let Ok(door) = doors.get(message.messaging_entity) {
+            info!("Door hit! Loading level: {}", door.leads_to);
+
+            // Update which level to load next
+            current_level.level_id = door.leads_to.clone();
+            current_level.loaded = false;
+
             next_state.set(GameState::LoadingNewLevel);
         }
     }
@@ -40,7 +27,8 @@ pub struct DoorPlugin;
 
 impl Plugin for DoorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::StartGame), spawn_door)
-           .add_systems(Update, handle_door_touch.run_if(in_state(GameState::Playing)));
+        // Doors are spawned by level.rs from RON data
+        // This plugin just handles the touch interaction
+        app.add_systems(Update, handle_door_touch.run_if(in_state(GameState::Playing)));
     }
 }
