@@ -6,6 +6,7 @@ struct LoadingTimer(Timer);
 mod game_state;
 mod loading;
 mod pause;
+mod loading_new_level;
 
 pub use game_state::GameState;
 
@@ -28,6 +29,11 @@ impl Plugin for StatePlugin {
 
             // StartGame -> Playing (runs once after spawning)
             .add_systems(Update, start_game_to_playing.run_if(in_state(GameState::StartGame)))
+
+            // LoadingNewLevel state systems
+            .add_systems(OnEnter(GameState::LoadingNewLevel), (loading_new_level::spawn_loading_new_level_screen, loading_new_level::despawn_level_entities))
+            .add_systems(Update, loading_new_level::animate_loading_room.run_if(in_state(GameState::LoadingNewLevel)))
+            .add_systems(OnExit(GameState::LoadingNewLevel), loading::despawn_loading_screen)
 
             // Pause state systems
             .add_systems(OnEnter(GameState::Paused), pause::spawn_pause_menu)

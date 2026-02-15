@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use crate::art::DOOR_ART;
 use crate::state::GameState;
 use crate::hitbox::{HitBox, PlayerTouchedSomething};
+use crate::level_entity::LevelEntity;
 
 #[derive(Component)]
 struct Door;
@@ -15,8 +16,9 @@ fn spawn_door(mut commands: Commands){
             ..default()
         },
         TextColor(Color::WHITE),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+        Transform::from_translation(Vec3::new(400.0, 400.0, 1.0)),
         Door,
+        LevelEntity,
         HitBox { width: 80.0, height: 120.0 },
     ));
 }
@@ -24,10 +26,12 @@ fn spawn_door(mut commands: Commands){
 fn handle_door_touch(
     mut messages: MessageReader<PlayerTouchedSomething>,
     doors: Query<(), With<Door>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for message in messages.read() {
         if doors.get(message.messaging_entity).is_ok() {
-            info!("Door collision!");
+            info!("Door hit!");
+            next_state.set(GameState::LoadingNewLevel);
         }
     }
 }

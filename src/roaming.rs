@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::state::GameState;
 
 #[derive(Component)]
 pub struct Roam{
@@ -25,6 +26,6 @@ pub struct RoamingPlugin;
 
 impl Plugin for RoamingPlugin{
     fn build(&self, app: &mut App){
-        app.add_systems(Update, roam);
+        app.add_systems(Update, roam.run_if(in_state(GameState::Playing)));
     }
 }

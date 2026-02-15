@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::hitbox::HitBox;
+use crate::level_entity::LevelEntity;
 use crate::state::GameState;
 
 #[derive(Component)]
@@ -16,6 +17,7 @@ fn spawn_wall(mut commands: Commands){
         TextColor(Color::WHITE),
         Transform::from_translation(Vec3 { x: (110.0), y: (10.0), z: (0.0) }),
         HitBox{width: 12.0, height: 12.0},
+        LevelEntity,
         Wall
     ));
 }
