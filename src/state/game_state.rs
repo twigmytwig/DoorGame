@@ -7,5 +7,6 @@ pub enum GameState {
     StartGame,
     Playing,
     LoadingNewLevel,
+    Dialogue,
     Paused,
 }

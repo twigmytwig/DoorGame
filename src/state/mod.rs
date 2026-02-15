@@ -7,6 +7,7 @@ mod game_state;
 mod loading;
 mod pause;
 mod loading_new_level;
+mod dialogue;
 
 pub use game_state::GameState;
 
@@ -16,6 +17,7 @@ impl Plugin for StatePlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(LoadingTimer(Timer::from_seconds(1.0, TimerMode::Once)))
+            .init_resource::<dialogue::DialogueState>()
             .init_state::<GameState>()
             
             // Loading state systems
@@ -27,8 +29,15 @@ impl Plugin for StatePlugin {
             .add_systems(OnExit(GameState::Loading),
                 loading::despawn_loading_screen)
 
-            // StartGame -> Playing (runs once after spawning)
-            .add_systems(Update, start_game_to_playing.run_if(in_state(GameState::StartGame)))
+            // StartGame: level.rs handles asset loading and transitions to Playing/Dialogue
+
+            // Dialogue state systems
+            .add_systems(OnEnter(GameState::Dialogue), (
+                dialogue::reset_dialogue_state,
+                dialogue::spawn_dialogue_panel,
+            ))
+            .add_systems(Update, dialogue::advance_dialogue.run_if(in_state(GameState::Dialogue)))
+            .add_systems(OnExit(GameState::Dialogue), dialogue::despawn_dialogue_panel)
 
             // LoadingNewLevel state systems
             .add_systems(OnEnter(GameState::LoadingNewLevel), (loading_new_level::spawn_loading_new_level_screen, loading_new_level::despawn_level_entities))
@@ -56,10 +65,6 @@ fn check_assets_loaded(
     if timer.0.is_finished() {
         next_state.set(GameState::StartGame);
     }
-}
-
-fn start_game_to_playing(mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::Playing);
 }
 
 fn toggle_pause(
