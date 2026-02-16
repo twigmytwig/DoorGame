@@ -5,6 +5,7 @@ pub enum GameState {
     #[default]
     Loading,
     Playing,
+    BossFight,
     LoadingNewLevel,
     Dialogue,
     Paused,

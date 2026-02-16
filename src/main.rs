@@ -11,7 +11,9 @@ mod level;
 mod level_entity;
 mod level_schema;
 mod camera;
+mod projectile; //projectile test
 use crate::camera::CameraPlugin;
+use crate::projectile::ProjectilePlugin; //projectile test
 use crate::door::DoorPlugin;
 use crate::player::PlayerPlugin;
 use crate::roaming::RoamingPlugin;
@@ -34,5 +36,6 @@ fn main() {
     .add_plugins(PlayerPlugin)
     .add_plugins(DoorPlugin)
     .add_plugins(RoamingPlugin)
+    .add_plugins(ProjectilePlugin) //projectile test
     .run();
 }
