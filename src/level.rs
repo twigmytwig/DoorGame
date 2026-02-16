@@ -9,7 +9,8 @@ use crate::hitbox::HitBox;
 use crate::wall::Wall;
 use crate::level_entity::LevelEntity;
 use crate::player::Player;
-use crate::level_schema::LevelData;
+use crate::level_schema::{LevelData, NpcData};
+use crate::npc::Npc;
 
 const TILE_SIZE: f32 = 32.0;
 const MAP_WIDTH: usize = 50;
@@ -65,6 +66,11 @@ pub fn spawn_level_from_data_internal(
     // Spawn doors from level data
     for door_data in &level_data.doors {
         spawn_door_from_data(commands, door_data);
+    }
+
+    // Spawn NPCs from level data
+    for npc_data in &level_data.npcs {
+        spawn_npc_from_data(commands, npc_data);
     }
 
     // Spawn player at level's start position
@@ -139,7 +145,7 @@ fn spawn_cave_level(commands: &mut Commands) {
     }
 }
 
-fn spawn_wall_at(commands: &mut Commands, pos: Vec3, size: f32) {
+pub fn spawn_wall_at(commands: &mut Commands, pos: Vec3, size: f32) {
     commands.spawn((
         Text2d::new("#"),
         TextFont { font_size: size, ..default() },
@@ -176,10 +182,56 @@ fn spawn_door_from_data(commands: &mut Commands, door_data: &crate::level_schema
                 });
                 info!("  + Roam (speed: {}, range: {})", speed, range);
             }
+            EntityComponent::Follow { .. } => {
+                // Doors don't follow the player.. yet
+            }
         }
     }
 
     info!("Spawned door '{}' at ({}, {})", door_data.label, door_data.position.0, door_data.position.1);
+}
+
+fn spawn_npc_from_data(commands: &mut Commands, npc_data: &NpcData) {
+    use crate::art::DUCK;
+    use crate::level_schema::EntityComponent;
+    use crate::roaming::Roam;
+    use crate::follow::Follow;
+
+    let art = match npc_data.name.as_str() {
+        "duck" => DUCK,
+        _ => "?",
+    };
+
+    let entity = commands.spawn((
+        Text2d::new(art),
+        TextFont { font_size: 16.0, ..default() },
+        TextColor(Color::WHITE),
+        Transform::from_translation(Vec3::new(npc_data.position.0, npc_data.position.1, 1.0)),
+        Npc { name: npc_data.name.clone() },
+        LevelEntity,
+    )).id();
+
+    // Add extra components from RON data
+    for component in &npc_data.extra {
+        match component {
+            EntityComponent::Roam { speed, range } => {
+                commands.entity(entity).insert(Roam {
+                    speed: *speed,
+                    range: *range,
+                });
+                info!("  + Roam (speed: {}, range: {})", speed, range);
+            }
+            EntityComponent::Follow { speed, distance } => {
+                commands.entity(entity).insert(Follow {
+                    speed: *speed,
+                    distance: *distance,
+                });
+                info!("  + Follow (speed: {}, distance: {})", speed, distance);
+            }
+        }
+    }
+
+    info!("Spawned NPC '{}' at ({}, {})", npc_data.name, npc_data.position.0, npc_data.position.1);
 }
 
 pub struct LevelPlugin;

@@ -80,9 +80,11 @@ pub fn check_new_level_ready(
         // Spawn the level entities
         spawn_level_from_data_internal(&mut commands, level_data, &windows);
 
-        // Transition based on whether there's dialogue
+        // Transition based on dialogue and level type
         if !level_data.dialogue.is_empty() {
             next_state.set(GameState::Dialogue);
+        } else if level_data.room_type == "boss" {
+            next_state.set(GameState::BossFight);
         } else {
             next_state.set(GameState::Playing);
         }

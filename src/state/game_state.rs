@@ -9,4 +9,5 @@ pub enum GameState {
     LoadingNewLevel,
     Dialogue,
     Paused,
+    Defeat
 }

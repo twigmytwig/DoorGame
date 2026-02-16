@@ -1,0 +1,22 @@
+(
+    id: "boss_test",
+    name: "Test Boss Arena",
+    room_type: "boss",
+    player_start: (0.0, -150.0),
+
+    dialogue: [
+        (speaker: "SCARY DOOR", text: "You dare enter my domain?"),
+        (speaker: "SCARY DOOR", text: "Prepare yourself..."),
+        (speaker: "Duck", text: "DONT LET ME DIE"),
+    ],
+
+    doors: [],
+
+    boss: Some("test_boss"),
+
+    items: [],
+    // NPCs in the room
+    npcs: [
+        (name: "duck", position: (0.0, -160.0), extra: [Follow(speed: 5.0, distance: 50.0)]),
+    ],
+)

@@ -41,6 +41,6 @@ pub struct HitBoxPlugin;
 impl Plugin for HitBoxPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<PlayerTouchedSomething>()
-           .add_systems(Update, detect_col_with_player.run_if(in_state(GameState::Playing)));
+           .add_systems(Update, detect_col_with_player.run_if(in_state(GameState::Playing).or(in_state(GameState::BossFight))));
     }
 }

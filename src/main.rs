@@ -11,14 +11,18 @@ mod level;
 mod level_entity;
 mod level_schema;
 mod camera;
-mod projectile; //projectile test
+mod projectile;
+mod ui;
+mod npc;
+mod follow;
 use crate::camera::CameraPlugin;
-use crate::projectile::ProjectilePlugin; //projectile test
+use crate::projectile::ProjectilePlugin;
 use crate::door::DoorPlugin;
 use crate::player::PlayerPlugin;
 use crate::roaming::RoamingPlugin;
 use crate::hitbox::HitBoxPlugin;
 use crate::level::LevelPlugin;
+use crate::follow::FollowPlugin;
 
 fn main() {
     App::new()
@@ -36,6 +40,7 @@ fn main() {
     .add_plugins(PlayerPlugin)
     .add_plugins(DoorPlugin)
     .add_plugins(RoamingPlugin)
-    .add_plugins(ProjectilePlugin) //projectile test
+    .add_plugins(ProjectilePlugin)
+    .add_plugins(FollowPlugin)
     .run();
 }

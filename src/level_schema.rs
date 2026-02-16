@@ -18,6 +18,9 @@ pub struct LevelData {
 
     #[serde(default)]
     pub items: Vec<ItemData>,
+
+    #[serde(default)]
+    pub npcs: Vec<NpcData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,13 +45,19 @@ pub struct DoorData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EntityComponent {
     Roam { speed: f32, range: f32 },
-    // Add more as needed:
-    // Creaky,
-    // Timed { delay: f32 },
+    Follow { speed: f32, distance: f32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItemData {
     pub item_type: String,
     pub position: (f32, f32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NpcData {
+    pub name: String,
+    pub position: (f32, f32),
+    #[serde(default)]
+    pub extra: Vec<EntityComponent>,
 }

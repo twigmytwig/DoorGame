@@ -86,8 +86,13 @@ pub fn advance_dialogue(
 
     // Check if we've exhausted all dialogue
     if dialogue_state.current_line >= level_data.dialogue.len() {
-        info!("Dialogue finished, transitioning to Playing");
-        next_state.set(crate::state::GameState::Playing);
+        if level_data.room_type == "boss" {
+            info!("Dialogue finished, transitioning to BossFight");
+            next_state.set(crate::state::GameState::BossFight);
+        } else {
+            info!("Dialogue finished, transitioning to Playing");
+            next_state.set(crate::state::GameState::Playing);
+        }
         return;
     }
 

@@ -31,6 +31,13 @@
             key_required: None,
             extra: [Roam(speed: 30.0, range: 100.0)],
         ),
+        (
+            position: (0.0, 250.0),
+            leads_to: "boss_test",
+            label: "Boss Door",
+            locked: false,
+            key_required: None,
+        ),
     ],
 
     // Boss fight (optional - omit or None for no boss)
@@ -38,4 +45,9 @@
 
     // Items in the room (optional)
     items: [],
+
+    // NPCs in the room
+    npcs: [
+        (name: "duck", position: (0.0, 200.0), extra: [Follow(speed: 5.0, distance: 50.0)]),
+    ],
 )

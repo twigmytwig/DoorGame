@@ -3,6 +3,12 @@ use crate::state::GameState;
 use crate::hitbox::HitBox;
 use crate::wall::Wall;
 
+#[derive(Resource)]
+pub struct PlayerHealth{
+    pub current: i8,
+    pub max: i8
+}
+
 #[derive(Component)]
 pub struct Player;
 
@@ -15,16 +21,16 @@ fn move_player(
     let (ref mut player_transform, player_hitbox) = *player_query;
 
     let mut direction = Vec2::ZERO;
-    if input.pressed(KeyCode::ArrowLeft){
+    if input.pressed(KeyCode::KeyA){
         direction.x -= 1.0;
     }
-    if input.pressed(KeyCode::ArrowRight){
+    if input.pressed(KeyCode::KeyD){
         direction.x += 1.0;
     }
-    if input.pressed(KeyCode::ArrowUp){
+    if input.pressed(KeyCode::KeyW){
         direction.y += 1.0;
     }
-    if input.pressed(KeyCode::ArrowDown){
+    if input.pressed(KeyCode::KeyS){
         direction.y -= 1.0;
     }
 
@@ -61,6 +67,8 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         // Player is spawned by level.rs from RON data (player_start)
-        app.add_systems(Update, move_player.run_if(in_state(GameState::Playing)));
+        app.add_systems(Update, move_player.run_if(
+            in_state(GameState::Playing).or(in_state(GameState::BossFight))
+        ));
     }
 }

@@ -1,10 +1,34 @@
 use bevy::prelude::*;
 use crate::hitbox::HitBox;
+use crate::level_entity::LevelEntity;
+use crate::player::PlayerHealth;
 use crate::state::GameState;
+use crate::hitbox::PlayerTouchedSomething;
+
 
 #[derive(Component)]
 pub struct Projectile {
     pub velocity: Vec2,
+}
+
+fn handle_projectile_touch_player(
+    mut messages: MessageReader<PlayerTouchedSomething>,
+    mut commands: Commands,
+    projectiles: Query<(), With<Projectile>>,
+    mut health: ResMut<PlayerHealth>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for message in messages.read() {
+        // Try to get the LevelDoor component from the touched entity
+        if projectiles.get(message.messaging_entity).is_ok() {
+            info!("Projectile hit player!");
+            commands.entity(message.messaging_entity).despawn();
+            health.current -= 1;// TODO: HARD CODED
+            if health.current == 0{
+                next_state.set(GameState::Defeat)
+            }
+        }
+    }
 }
 
 fn move_projectiles(
@@ -29,25 +53,18 @@ pub fn spawn_projectile_at(
         TextColor(Color::srgb(1.0, 0.3, 0.3)),
         Transform::from_translation(pos),
         Projectile { velocity },
+        LevelEntity,
         HitBox { width: 24.0, height: 24.0 },
     ));
 }
 
-// Test spawn - remove later
-fn test_spawn_projectile(mut commands: Commands) {
-    spawn_projectile_at(
-        &mut commands,
-        Vec3::new(300.0, 0.0, 5.0),
-        Vec2::new(-150.0, 0.0),
-        "{=}",
-    );
-}
-
 pub struct ProjectilePlugin;
-//TODO: ITS PLAYING STATE RN BUT WILL BE BOSSFIGHT STATE
+
 impl Plugin for ProjectilePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::BossFight), test_spawn_projectile)
-           .add_systems(Update, move_projectiles.run_if(in_state(GameState::BossFight)));
+        app.add_systems(Update, (
+            move_projectiles,
+            handle_projectile_touch_player,
+        ).run_if(in_state(GameState::BossFight)));
     }
 }

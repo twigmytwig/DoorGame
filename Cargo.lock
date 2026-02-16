@@ -714,6 +714,7 @@ dependencies = [
  "bevy",
  "bevy_common_assets",
  "mapgen",
+ "rand 0.9.2",
  "serde",
 ]
 

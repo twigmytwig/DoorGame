@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is an ASCII-based door-choosing roguelike built with Bevy 0.18. The game uses a state machine to control flow and loads levels from RON files.
+This is an ASCII-based door-choosing roguelike built with Bevy 0.18. The game uses a state machine to control flow and loads levels from RON files. Features include exploration, dialogue, and Undertale-style boss fights.
 
 ## Startup Flow
 
@@ -19,33 +19,33 @@ main.rs
     ├── LevelPlugin (RON asset loading, level resources)
     ├── PlayerPlugin (movement system)
     ├── DoorPlugin (door interaction)
-    └── RoamingPlugin (entity roaming behavior)
+    ├── RoamingPlugin (entity roaming behavior)
+    └── ProjectilePlugin (projectile movement + collision)
 ```
 
 ## State Machine
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   Loading ──────► LoadingNewLevel ──────► Dialogue ──────►     │
-│      │                   │                    │           Playing
-│      │                   │                    │              │
-│      │                   ▼                    ▼              │
-│      │            (if no dialogue) ─────────────────────────►│
-│      │                                                       │
-│      └──────────────────────────────────────────────────────►│
-│                                                              │
-│                         ┌────────────────┐                   │
-│                         │                │                   │
-│                         ▼                │                   │
-│   Playing ◄────────► Paused             │                   │
-│      │                (ESC)              │                   │
-│      │                                   │                   │
-│      │  (touch door)                     │                   │
-│      ▼                                   │                   │
-│   LoadingNewLevel ───────────────────────┘                   │
-│                                                               │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   Loading ──────► LoadingNewLevel ──────► Dialogue ──────► Playing      │
+│                        │                      │               │          │
+│                        │                      │               ▼          │
+│                        │                      │            Paused        │
+│                        │                      │               │          │
+│                        ▼                      ▼               │          │
+│              (if boss level) ────────► BossFight ◄───────────┘          │
+│                                            │                             │
+│                                            ▼                             │
+│                                         Defeat                           │
+│                                            │                             │
+│                                            │ (ESC - restart)             │
+│                                            ▼                             │
+│                                    LoadingNewLevel                       │
+│                                                                          │
+│   Playing ───(touch door)───► LoadingNewLevel                           │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Detailed State Descriptions
@@ -71,7 +71,10 @@ main.rs
 - `check_new_level_ready()` - Polls `Assets<LevelData>` until loaded, then:
   - Stores data in `LoadedLevelData` resource
   - Calls `spawn_level_from_data_internal()` to spawn walls, doors, player
-  - Transitions to `Dialogue` (if level has dialogue) or `Playing`
+  - Transitions based on level type:
+    - Has dialogue → `Dialogue`
+    - Boss level (`room_type: "boss"`) → `BossFight`
+    - Normal level → `Playing`
 
 **OnExit:**
 - Despawns loading screen
@@ -87,7 +90,9 @@ main.rs
 - `advance_dialogue()` - On Space/Enter:
   - Increments line index
   - Updates speaker/text UI
-  - Transitions to `Playing` when exhausted
+  - When exhausted, transitions based on level type:
+    - Boss level → `BossFight`
+    - Normal level → `Playing`
 
 **OnExit:**
 - `despawn_dialogue_panel()`
@@ -96,7 +101,7 @@ main.rs
 **File:** Various
 
 **Active Systems:**
-- `move_player` (player.rs) - Arrow key movement with wall collision
+- `move_player` (player.rs) - WASD movement with wall collision
 - `follow_player` (camera.rs) - Camera lerps to player position
 - `detect_col_with_player` (hitbox.rs) - Sends collision messages
 - `handle_door_touch` (door.rs) - Door collision triggers level transition
@@ -120,6 +125,43 @@ main.rs
 **OnExit:**
 - `despawn_pause_menu()`
 
+### 6. BossFight
+**File:** `state/boss_fight.rs`
+
+**OnEnter:**
+- `spawn_boss_arena()` - Spawns:
+  - Combat arena walls (confines player)
+  - Boss ASCII art above arena
+  - `PlayerArena` component with dimensions
+- `reset_attack_timer()` - Initializes projectile spawning
+
+**Update:**
+- `move_player` (player.rs) - Player moves within arena
+- `fire_projectiles_at_player` (boss_fight.rs) - Every 1 second:
+  - Spawns projectile from boss position
+  - Aimed at player with random speed (150-300)
+  - Stops after 15 projectiles
+- `move_projectiles` (projectile.rs) - Projectiles move by velocity
+- `handle_projectile_touch_player` (projectile.rs) - On hit:
+  - Despawns projectile
+  - Decrements player health
+  - If health <= 0 → `Defeat`
+
+### 7. Defeat
+**File:** `state/defeat.rs`
+
+**OnEnter:**
+- `spawn_defeat_menu()` - Shows game over UI
+
+**Update:**
+- `toggle_pause()` - ESC triggers restart:
+  - Resets `PlayerHealth` to max
+  - Resets `CurrentLevel` to "level_01_intro"
+  - Transitions to `LoadingNewLevel`
+
+**OnExit:**
+- `despawn_defeat_menu()`
+
 ## Level Loading Flow
 
 ```
@@ -137,7 +179,7 @@ check_new_level_ready() detects asset loaded
             ▼
 spawn_level_from_data_internal()
     ├── Spawns walls (square border or cave generation)
-    ├── Spawns doors from level_data.doors
+    ├── Spawns doors from level_data.doors (with extra components)
     └── Spawns player at level_data.player_start
 ```
 
@@ -148,6 +190,8 @@ spawn_level_from_data_internal()
 | `CurrentLevel` | Tracks level_id, asset handle, loaded status |
 | `LoadedLevelData` | Stores parsed LevelData for current level |
 | `DialogueState` | Tracks current dialogue line index |
+| `PlayerHealth` | Player's current and max health (default: 3/3) |
+| `AttackTimer` | Boss fight projectile spawn timer + count |
 
 ## Key Components
 
@@ -159,6 +203,9 @@ spawn_level_from_data_internal()
 | `LevelEntity` | Marks entities to despawn on level transition |
 | `HitBox` | Collision bounds (width, height) |
 | `Roam` | Enables roaming behavior (speed, range) |
+| `Projectile` | Projectile with velocity |
+| `Boss` | Marks the boss entity |
+| `PlayerArena` | Boss fight arena bounds |
 
 ## RON Level Format
 
@@ -166,7 +213,7 @@ spawn_level_from_data_internal()
 (
     id: "level_01_intro",
     name: "The Beginning",
-    room_type: "square",  // or "cave"
+    room_type: "square",  // "square", "cave", or "boss"
     player_start: (0.0, -200.0),
     dialogue: [
         (speaker: "???", text: "You awaken..."),
@@ -183,10 +230,27 @@ spawn_level_from_data_internal()
             leads_to: "level_03",
             label: "Wandering Door",
             locked: false,
-            extra: [Roam(speed: 30.0, range: 100.0)],  // Door moves!
+            extra: [Roam(speed: 30.0, range: 100.0)],
         ),
     ],
-    boss: None,
+    boss: None,  // or Some("boss_name") for boss levels
+    items: [],
+)
+```
+
+## Boss Level RON Format
+
+```ron
+(
+    id: "boss_test",
+    name: "Test Boss Arena",
+    room_type: "boss",  // This triggers BossFight state
+    player_start: (0.0, -150.0),
+    dialogue: [
+        (speaker: "BOSS", text: "Prepare yourself..."),
+    ],
+    doors: [],  // No doors in boss fights
+    boss: Some("test_boss"),
     items: [],
 )
 ```
