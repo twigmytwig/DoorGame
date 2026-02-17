@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use crate::level_entity::LevelEntity;
 use crate::level::{CurrentLevel, LoadedLevelData, spawn_level_from_data_internal};
 use crate::level_schema::LevelData;
+use crate::story_flags::StoryFlags;
 use super::GameState;
 use super::loading::{LoadingScreen, LoadingText};
 
@@ -67,6 +68,7 @@ pub fn check_new_level_ready(
     mut loaded_data: ResMut<LoadedLevelData>,
     mut next_state: ResMut<NextState<GameState>>,
     windows: Query<&Window>,
+    story_flags: Res<StoryFlags>,
 ) {
     if current_level.loaded {
         return;
@@ -78,7 +80,7 @@ pub fn check_new_level_ready(
         current_level.loaded = true;
 
         // Spawn the level entities
-        spawn_level_from_data_internal(&mut commands, level_data, &windows);
+        spawn_level_from_data_internal(&mut commands, level_data, &windows, &story_flags);
 
         // Transition based on dialogue and level type
         if !level_data.dialogue.is_empty() {

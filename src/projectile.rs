@@ -4,6 +4,8 @@ use crate::level_entity::LevelEntity;
 use crate::player::PlayerHealth;
 use crate::state::GameState;
 use crate::hitbox::PlayerTouchedSomething;
+use crate::npc::Npc;
+use crate::story_flags::{StoryFlags, FlagValue};
 
 
 #[derive(Component)]
@@ -41,6 +43,55 @@ fn move_projectiles(
     }
 }
 
+fn handle_projectile_touch_npc(
+    mut commands: Commands,
+    projectiles: Query<(Entity, &Transform, &HitBox), With<Projectile>>,
+    npcs: Query<(Entity, &Transform, &HitBox, &Npc)>,
+    mut story_flags: ResMut<StoryFlags>,
+) {
+    for (proj_entity, proj_transform, proj_hitbox) in &projectiles {
+        let proj_pos = proj_transform.translation;
+
+        for (npc_entity, npc_transform, npc_hitbox, npc) in &npcs {
+            let npc_pos = npc_transform.translation;
+
+            // AABB overlap check
+            let overlap_x = (proj_pos.x - npc_pos.x).abs() < (proj_hitbox.width + npc_hitbox.width) / 2.0;
+            let overlap_y = (proj_pos.y - npc_pos.y).abs() < (proj_hitbox.height + npc_hitbox.height) / 2.0;
+
+            if overlap_x && overlap_y {
+                let name_lower = npc.name.to_lowercase();
+                let health_key = format!("{}_health", name_lower);
+                let present_key = format!("{}_present", name_lower);
+                let status_key = format!("{}_status", name_lower);
+
+                // Get current health, default to 1 if no flag exists
+                let current_health = story_flags.get_number(&health_key).unwrap_or(1);
+                let new_health = current_health - 1;
+
+                info!("Projectile hit NPC '{}', health: {} -> {}", npc.name, current_health, new_health);
+
+                // Despawn projectile
+                commands.entity(proj_entity).despawn();
+
+                if new_health <= 0 {
+                    // NPC dies
+                    info!("NPC '{}' has died!", npc.name);
+                    story_flags.set(&present_key, FlagValue::Bool(false));
+                    story_flags.set(&status_key, FlagValue::Text("died_in_boss".to_string()));
+                    story_flags.set(&health_key, FlagValue::Number(0));
+                    commands.entity(npc_entity).despawn();
+                } else {
+                    // Update health
+                    story_flags.set(&health_key, FlagValue::Number(new_health));
+                }
+
+                break; // Projectile hit something, stop checking this projectile
+            }
+        }
+    }
+}
+
 pub fn spawn_projectile_at(
     commands: &mut Commands,
     pos: Vec3,
@@ -65,6 +116,7 @@ impl Plugin for ProjectilePlugin {
         app.add_systems(Update, (
             move_projectiles,
             handle_projectile_touch_player,
+            handle_projectile_touch_npc,
         ).run_if(in_state(GameState::BossFight)));
     }
 }

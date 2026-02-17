@@ -43,3 +43,65 @@ Undertale-inspired boss encounters where:
 ## Audio
 - Each door has a unique creaking sound when opened
 - Different door types have distinct creaking voices/personalities
+
+## The Duck (Companion System)
+- A duck companion follows the player through the game
+- The duck provides company, maybe hints, or light dialogue
+- In future levels, the player may encounter a trade: **give up the duck for a key**
+- The key unlocks a valuable door, but you lose your companion forever
+- Reinforces the core theme: **decisions are hard, and some choices can't be undone**
+- Do you sacrifice your friend for progress? Or keep them and find another way?
+- No right answer—just consequences
+
+## Story Flags System (Branching Narrative)
+
+### Purpose
+Track player choices and game events to enable:
+- Branching dialogue (NPCs react to what you've done)
+- Conditional level destinations (doors lead to different places based on history)
+- Persistent consequences (duck died vs duck traded = different story beats)
+
+### Approach: HashMap-based Flags
+We use a flexible `HashMap<String, FlagValue>` instead of hard-coded struct fields.
+
+**Why HashMap over struct fields:**
+| Approach | Adding new flags | Code changes needed? |
+|----------|------------------|---------------------|
+| Struct (`duck_alive: bool`) | Add new field | Yes - recompile |
+| HashMap (`flags["duck_alive"]`) | Just use it | No - fully data-driven |
+
+**FlagValue types:**
+- `Bool(true/false)` - simple on/off states
+- `Text("alive"/"dead"/"traded")` - categorical states
+- `Number(5)` - counters, scores, quantities
+
+### Usage Examples
+
+**Setting flags:**
+- Duck dies in boss → set `duck_status = Text("died_in_boss")`
+- Player trades duck → set `duck_status = Text("traded")`
+- Player defeats boss → set `bosses_defeated = Number(1)`
+
+**Conditional dialogue in RON:**
+```
+(speaker: "NPC", text: "Your duck... I'm sorry.", condition: Equals("duck_status", Text("died_in_boss")))
+(speaker: "NPC", text: "You traded him?!", condition: Equals("duck_status", Text("traded")))
+(speaker: "Duck", text: "Quack!", condition: Equals("duck_status", Text("alive")))
+```
+
+**Conditional door destinations:**
+```
+leads_to: "level_03",
+leads_to_if: [
+    (condition: Equals("duck_status", Text("alive")), level: "level_03_with_duck"),
+    (condition: Equals("duck_status", Text("traded")), level: "level_03_guilt"),
+],
+```
+
+### Trade-offs
+- **Pro:** Maximum flexibility - add new flags without code changes
+- **Pro:** Designers can iterate on narrative without recompiling
+- **Con:** Less type-safe - string typos won't be caught at compile time
+- **Con:** Need discipline with flag naming conventions
+
+This is the same approach used by narrative tools like Ink and Twine.

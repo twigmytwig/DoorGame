@@ -15,6 +15,7 @@ mod projectile;
 mod ui;
 mod npc;
 mod follow;
+mod story_flags;
 use crate::camera::CameraPlugin;
 use crate::projectile::ProjectilePlugin;
 use crate::door::DoorPlugin;

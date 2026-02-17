@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::level::LoadedLevelData;
+use crate::story_flags::StoryFlags;
 
 #[derive(Component)]
 pub struct DialoguePanel;
@@ -19,13 +20,22 @@ pub struct DialogueState {
 pub fn spawn_dialogue_panel(
     mut commands: Commands,
     loaded_data: Res<LoadedLevelData>,
+    story_flags: Res<StoryFlags>,
+    mut dialogue_state: ResMut<DialogueState>,
 ) {
-    // Get first dialogue line, or placeholder if none
+    // Get first dialogue line that can be spoken, or placeholder if none
     let (speaker, text) = if let Some(level_data) = &loaded_data.0 {
-        if let Some(line) = level_data.dialogue.first() {
-            (line.speaker.clone(), line.text.clone())
-        } else {
-            ("".to_string(), "".to_string())
+        // Find first line from a speaker who can speak
+        loop {
+            if dialogue_state.current_line >= level_data.dialogue.len() {
+                break ("".to_string(), "".to_string());
+            }
+            let line = &level_data.dialogue[dialogue_state.current_line];
+            if story_flags.can_speaker_speak(&line.speaker) {
+                break (line.speaker.clone(), line.text.clone());
+            }
+            info!("Skipping initial dialogue from '{}' (not present)", line.speaker);
+            dialogue_state.current_line += 1;
         }
     } else {
         ("".to_string(), "No dialogue loaded".to_string())
@@ -75,6 +85,7 @@ pub fn advance_dialogue(
     mut speaker_query: Query<&mut Text, (With<DialogueSpeakerText>, Without<DialogueBodyText>)>,
     mut body_query: Query<&mut Text, (With<DialogueBodyText>, Without<DialogueSpeakerText>)>,
     mut next_state: ResMut<NextState<crate::state::GameState>>,
+    story_flags: Res<StoryFlags>,
 ) {
     if !input.just_pressed(KeyCode::Space) && !input.just_pressed(KeyCode::Enter) {
         return;
@@ -96,7 +107,32 @@ pub fn advance_dialogue(
         return;
     }
 
-    // Update the text to show next line
+    // Skip dialogue from NPCs that can't speak (dead, traded, not present)
+    loop {
+        // Check if we've exhausted all dialogue while skipping
+        if dialogue_state.current_line >= level_data.dialogue.len() {
+            if level_data.room_type == "boss" {
+                info!("Dialogue finished (after skipping), transitioning to BossFight");
+                next_state.set(crate::state::GameState::BossFight);
+            } else {
+                info!("Dialogue finished (after skipping), transitioning to Playing");
+                next_state.set(crate::state::GameState::Playing);
+            }
+            return;
+        }
+
+        let line = &level_data.dialogue[dialogue_state.current_line];
+
+        if story_flags.can_speaker_speak(&line.speaker) {
+            break; // This speaker can speak, show their line
+        }
+
+        // Speaker can't speak, skip to next line
+        info!("Skipping dialogue from '{}' (not present)", line.speaker);
+        dialogue_state.current_line += 1;
+    }
+
+    // Update the text to show the valid line
     let line = &level_data.dialogue[dialogue_state.current_line];
 
     for mut text in speaker_query.iter_mut() {

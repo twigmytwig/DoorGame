@@ -15,6 +15,7 @@ pub use game_state::GameState;
 
 use crate::player::PlayerHealth;
 use crate::ui;
+use crate::story_flags::{StoryFlags, FlagValue};
 
 pub struct StatePlugin;
 
@@ -24,10 +25,14 @@ impl Plugin for StatePlugin {
             .insert_resource(PlayerHealth {current: 3, max: 3})
             .insert_resource(LoadingTimer(Timer::from_seconds(1.0, TimerMode::Once)))
             .init_resource::<dialogue::DialogueState>()
+            .init_resource::<StoryFlags>()
             .init_state::<GameState>()
             
             // Loading state systems
-            .add_systems(OnEnter(GameState::Loading), loading::spawn_loading_screen)
+            .add_systems(OnEnter(GameState::Loading), (
+                loading::spawn_loading_screen,
+                init_story_flags,
+            ))
             .add_systems(Update, (
                 check_assets_loaded,
                 loading::animate_loading,
@@ -35,12 +40,12 @@ impl Plugin for StatePlugin {
             .add_systems(OnExit(GameState::Loading),
                 loading::despawn_loading_screen)
 
-            // Dialogue state systems
+            // Dialogue state systems (reset must run before spawn_dialogue_panel)
             .add_systems(OnEnter(GameState::Dialogue), (
                 dialogue::reset_dialogue_state,
                 dialogue::spawn_dialogue_panel,
-                ui::spawn_health_ui
-            ))
+            ).chain())
+            .add_systems(OnEnter(GameState::Dialogue), (ui::spawn_health_ui, ui::spawn_follower_health_ui))
             .add_systems(Update, dialogue::advance_dialogue.run_if(in_state(GameState::Dialogue)))
             .add_systems(OnExit(GameState::Dialogue), dialogue::despawn_dialogue_panel)
 
@@ -78,13 +83,15 @@ impl Plugin for StatePlugin {
                 boss_fight::spawn_boss_arena,
                 boss_fight::reset_attack_timer,
                 ui::spawn_health_ui,
+                ui::spawn_follower_health_ui,
             ))
             .add_systems(Update, boss_fight::fire_projectiles_at_player.run_if(in_state(GameState::BossFight)))
 
             // Health UI systems
             .add_systems(Update, ui::update_health_ui.run_if(resource_changed::<PlayerHealth>))
-            .add_systems(OnEnter(GameState::LoadingNewLevel), ui::despawn_health_ui)
-            .add_systems(OnEnter(GameState::Defeat), ui::despawn_health_ui);
+            .add_systems(Update, ui::update_follower_health_ui.run_if(resource_changed::<StoryFlags>))
+            .add_systems(OnEnter(GameState::LoadingNewLevel), (ui::despawn_health_ui, ui::despawn_follower_health_ui))
+            .add_systems(OnEnter(GameState::Defeat), (ui::despawn_health_ui, ui::despawn_follower_health_ui));
     }
 }
 
@@ -100,12 +107,21 @@ fn check_assets_loaded(
     }
 }
 
+fn init_story_flags(mut flags: ResMut<StoryFlags>) {
+    flags.set("duck_status", FlagValue::Text("alive".to_string()));
+    flags.set("duck_present", FlagValue::Bool(true));
+    flags.set("duck_health", FlagValue::Number(3));
+    flags.set("duck_max_health", FlagValue::Number(3));
+    info!("Story flags initialized");
+}
+
 fn toggle_pause( // ALSO HANDLES RESTARTING GAME TODO: DONT PUT RESTART LOGIC IN HERE
     input: Res<ButtonInput<KeyCode>>,
     current_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
     mut player_health: ResMut<PlayerHealth>,
     mut current_level: ResMut<crate::level::CurrentLevel>,
+    mut story_flags: ResMut<StoryFlags>,
 ) {
     if input.just_pressed(KeyCode::Escape) {
         match current_state.get() {
@@ -121,6 +137,10 @@ fn toggle_pause( // ALSO HANDLES RESTARTING GAME TODO: DONT PUT RESTART LOGIC IN
                 info!("Game restarted");
                 // Reset player health
                 player_health.current = player_health.max;
+                // Reset story flags (duck comes back!)
+                story_flags.set("duck_status", FlagValue::Text("alive".to_string()));
+                story_flags.set("duck_present", FlagValue::Bool(true));
+                story_flags.set("duck_health", FlagValue::Number(3));
                 // Reset to first level
                 current_level.level_id = "level_01_intro".to_string();
                 current_level.loaded = false;

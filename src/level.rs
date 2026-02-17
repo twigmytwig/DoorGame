@@ -11,6 +11,7 @@ use crate::level_entity::LevelEntity;
 use crate::player::Player;
 use crate::level_schema::{LevelData, NpcData};
 use crate::npc::Npc;
+use crate::story_flags::StoryFlags;
 
 const TILE_SIZE: f32 = 32.0;
 const MAP_WIDTH: usize = 50;
@@ -51,6 +52,7 @@ pub fn spawn_level_from_data_internal(
     commands: &mut Commands,
     level_data: &LevelData,
     windows: &Query<&Window>,
+    story_flags: &StoryFlags,
 ) {
     info!("Spawning level: {} ({})", level_data.name, level_data.room_type);
 
@@ -70,7 +72,7 @@ pub fn spawn_level_from_data_internal(
 
     // Spawn NPCs from level data
     for npc_data in &level_data.npcs {
-        spawn_npc_from_data(commands, npc_data);
+        spawn_npc_from_data(commands, npc_data, story_flags);
     }
 
     // Spawn player at level's start position
@@ -191,11 +193,18 @@ fn spawn_door_from_data(commands: &mut Commands, door_data: &crate::level_schema
     info!("Spawned door '{}' at ({}, {})", door_data.label, door_data.position.0, door_data.position.1);
 }
 
-fn spawn_npc_from_data(commands: &mut Commands, npc_data: &NpcData) {
+fn spawn_npc_from_data(commands: &mut Commands, npc_data: &NpcData, story_flags: &StoryFlags) {
     use crate::art::DUCK;
     use crate::level_schema::EntityComponent;
     use crate::roaming::Roam;
     use crate::follow::Follow;
+
+    // Check if this NPC should spawn based on story flags
+    let present_key = format!("{}_present", npc_data.name.to_lowercase());
+    if let Some(false) = story_flags.get_bool(&present_key) {
+        info!("NPC '{}' is not present, not spawning", npc_data.name);
+        return;
+    }
 
     let art = match npc_data.name.as_str() {
         "duck" => DUCK,
@@ -208,6 +217,7 @@ fn spawn_npc_from_data(commands: &mut Commands, npc_data: &NpcData) {
         TextColor(Color::WHITE),
         Transform::from_translation(Vec3::new(npc_data.position.0, npc_data.position.1, 1.0)),
         Npc { name: npc_data.name.clone() },
+        HitBox { width: 32.0, height: 32.0 },
         LevelEntity,
     )).id();
 
