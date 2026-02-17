@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = "0.18"
+bevy = { version = "0.18", features = ["mp3"] }
 mapgen = "0.6"
 bevy_common_assets = { version = "0.15.0-rc.1", features = ["ron"] }
 serde = { version = "1.0", features = ["derive"] }

@@ -1,9 +1,12 @@
 use bevy::prelude::*;
+use crate::audio::play_sfx;
 use crate::state::GameState;
 use crate::hitbox::PlayerTouchedSomething;
 use crate::level::{LevelDoor, CurrentLevel};
 
 fn handle_door_touch(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut messages: MessageReader<PlayerTouchedSomething>,
     doors: Query<&LevelDoor>,
     mut current_level: ResMut<CurrentLevel>,
@@ -13,7 +16,8 @@ fn handle_door_touch(
         // Try to get the LevelDoor component from the touched entity
         if let Ok(door) = doors.get(message.messaging_entity) {
             info!("Door hit! Loading level: {}", door.leads_to);
-
+            //play the door opening sfx
+            play_sfx(&mut commands, &asset_server, "creaking_door", "mp3");
             // Update which level to load next
             current_level.level_id = door.leads_to.clone();
             current_level.loaded = false;

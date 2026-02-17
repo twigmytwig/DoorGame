@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::hitbox::HitBox;
+use crate::audio::play_sfx;
 use crate::level_entity::LevelEntity;
 use crate::player::PlayerHealth;
 use crate::state::GameState;
@@ -14,8 +15,9 @@ pub struct Projectile {
 }
 
 fn handle_projectile_touch_player(
-    mut messages: MessageReader<PlayerTouchedSomething>,
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut messages: MessageReader<PlayerTouchedSomething>,
     projectiles: Query<(), With<Projectile>>,
     mut health: ResMut<PlayerHealth>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -24,6 +26,9 @@ fn handle_projectile_touch_player(
         // Try to get the LevelDoor component from the touched entity
         if projectiles.get(message.messaging_entity).is_ok() {
             info!("Projectile hit player!");
+            //sound of projectile hit
+            play_sfx(&mut commands, &asset_server, "player_hit", "mp3");
+
             commands.entity(message.messaging_entity).despawn();
             health.current -= 1;// TODO: HARD CODED
             if health.current == 0{
@@ -45,6 +50,7 @@ fn move_projectiles(
 
 fn handle_projectile_touch_npc(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     projectiles: Query<(Entity, &Transform, &HitBox), With<Projectile>>,
     npcs: Query<(Entity, &Transform, &HitBox, &Npc)>,
     mut story_flags: ResMut<StoryFlags>,
@@ -64,7 +70,11 @@ fn handle_projectile_touch_npc(
                 let health_key = format!("{}_health", name_lower);
                 let present_key = format!("{}_present", name_lower);
                 let status_key = format!("{}_status", name_lower);
-
+                
+                //TODO: FIND A BETTER WAY TO DO THIS
+                if name_lower == "duck"{
+                    play_sfx(&mut commands, &asset_server, "duck_quack", "mp3");
+                }
                 // Get current health, default to 1 if no flag exists
                 let current_health = story_flags.get_number(&health_key).unwrap_or(1);
                 let new_health = current_health - 1;
