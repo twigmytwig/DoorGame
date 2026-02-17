@@ -20,6 +20,7 @@ main.rs
     ├── PlayerPlugin (movement system)
     ├── DoorPlugin (door interaction)
     ├── RoamingPlugin (entity roaming behavior)
+    ├── FollowPlugin (NPC follow player behavior)
     └── ProjectilePlugin (projectile movement + collision)
 ```
 
@@ -54,6 +55,7 @@ main.rs
 **File:** `state/loading.rs`
 
 - Spawns loading screen UI ("Loading...")
+- Initializes `StoryFlags` with default values (duck_status, duck_present, duck_health)
 - Animates loading text dots
 - Waits 1 second (LoadingTimer)
 - Transitions to `LoadingNewLevel`
@@ -83,12 +85,15 @@ main.rs
 **File:** `state/dialogue.rs`
 
 **OnEnter:**
-- `reset_dialogue_state()` - Sets current_line to 0
-- `spawn_dialogue_panel()` - Creates UI panel with first dialogue line
+- `reset_dialogue_state()` - Sets current_line to 0 (runs first via `.chain()`)
+- `spawn_dialogue_panel()` - Creates UI panel, skips lines from absent NPCs
+- `spawn_health_ui()` - Shows player health
+- `spawn_follower_health_ui()` - Shows follower health (e.g., duck)
 
 **Update:**
 - `advance_dialogue()` - On Space/Enter:
   - Increments line index
+  - Skips dialogue from NPCs where `{name}_present` is false
   - Updates speaker/text UI
   - When exhausted, transitions based on level type:
     - Boss level → `BossFight`
@@ -134,9 +139,12 @@ main.rs
   - Boss ASCII art above arena
   - `PlayerArena` component with dimensions
 - `reset_attack_timer()` - Initializes projectile spawning
+- `spawn_health_ui()` - Shows player health
+- `spawn_follower_health_ui()` - Shows follower health
 
 **Update:**
 - `move_player` (player.rs) - Player moves within arena
+- `follow` (follow.rs) - NPCs with `Follow` component lerp toward player
 - `fire_projectiles_at_player` (boss_fight.rs) - Every 1 second:
   - Spawns projectile from boss position
   - Aimed at player with random speed (150-300)
@@ -146,16 +154,24 @@ main.rs
   - Despawns projectile
   - Decrements player health
   - If health <= 0 → `Defeat`
+- `handle_projectile_touch_npc` (projectile.rs) - On NPC hit:
+  - Despawns projectile
+  - Decrements `{npc_name}_health` in StoryFlags
+  - If health <= 0: sets `{name}_present = false`, `{name}_status = "died_in_boss"`, despawns NPC
+- `update_follower_health_ui` (ui.rs) - Updates when StoryFlags changes
 
 ### 7. Defeat
 **File:** `state/defeat.rs`
 
 **OnEnter:**
 - `spawn_defeat_menu()` - Shows game over UI
+- `despawn_health_ui()` - Removes player health UI
+- `despawn_follower_health_ui()` - Removes follower health UI
 
 **Update:**
 - `toggle_pause()` - ESC triggers restart:
   - Resets `PlayerHealth` to max
+  - Resets `StoryFlags` (duck_status = "alive", duck_present = true, duck_health = 3)
   - Resets `CurrentLevel` to "level_01_intro"
   - Transitions to `LoadingNewLevel`
 
@@ -180,7 +196,52 @@ check_new_level_ready() detects asset loaded
 spawn_level_from_data_internal()
     ├── Spawns walls (square border or cave generation)
     ├── Spawns doors from level_data.doors (with extra components)
+    ├── Spawns NPCs from level_data.npcs (checks StoryFlags for presence)
     └── Spawns player at level_data.player_start
+```
+
+## Story Flags System
+
+**File:** `story_flags.rs`
+
+A HashMap-based system for tracking persistent game state across levels.
+
+```rust
+StoryFlags {
+    flags: HashMap<String, FlagValue>
+}
+
+FlagValue = Bool(bool) | Text(String) | Number(i32)
+```
+
+**Naming Convention:**
+- `{npc_name}_status` → "alive", "dead", "traded" (what happened)
+- `{npc_name}_present` → true/false (can they spawn/speak)
+- `{npc_name}_health` → current health
+- `{npc_name}_max_health` → max health
+
+**How it affects gameplay:**
+1. **NPC Spawning:** `spawn_npc_from_data()` checks `{name}_present` - if false, NPC doesn't spawn
+2. **Dialogue:** `can_speaker_speak()` checks `{name}_present` - skips lines from absent NPCs
+3. **Combat:** `handle_projectile_touch_npc()` decrements `{name}_health`, sets flags on death
+4. **Health UI:** `update_follower_health_ui()` reads health from flags
+
+**Example flow when duck dies:**
+```
+Projectile hits duck
+    │
+    ▼
+duck_health: 3 → 2 → 1 → 0
+    │
+    ▼
+duck_present = false
+duck_status = "died_in_boss"
+    │
+    ▼
+Duck entity despawned
+    │
+    ▼
+Next level: duck doesn't spawn, Duck dialogue skipped
 ```
 
 ## Key Resources
@@ -192,6 +253,7 @@ spawn_level_from_data_internal()
 | `DialogueState` | Tracks current dialogue line index |
 | `PlayerHealth` | Player's current and max health (default: 3/3) |
 | `AttackTimer` | Boss fight projectile spawn timer + count |
+| `StoryFlags` | HashMap-based persistent game state (NPC status, health, presence) |
 
 ## Key Components
 
@@ -203,9 +265,13 @@ spawn_level_from_data_internal()
 | `LevelEntity` | Marks entities to despawn on level transition |
 | `HitBox` | Collision bounds (width, height) |
 | `Roam` | Enables roaming behavior (speed, range) |
+| `Follow` | Enables follow-player behavior (speed, distance) |
+| `Npc` | Marks NPC entity with name (maps to StoryFlags) |
 | `Projectile` | Projectile with velocity |
 | `Boss` | Marks the boss entity |
 | `PlayerArena` | Boss fight arena bounds |
+| `FollowerHealthContainer` | UI container for follower health (links to npc_name) |
+| `FollowerHeartDisplay` | Individual heart in follower health UI |
 
 ## RON Level Format
 
@@ -217,6 +283,7 @@ spawn_level_from_data_internal()
     player_start: (0.0, -200.0),
     dialogue: [
         (speaker: "???", text: "You awaken..."),
+        (speaker: "Duck", text: "Follow me!"),  // Skipped if duck not present
     ],
     doors: [
         (
@@ -235,6 +302,13 @@ spawn_level_from_data_internal()
     ],
     boss: None,  // or Some("boss_name") for boss levels
     items: [],
+    npcs: [
+        (
+            name: "duck",
+            position: (100.0, 200.0),
+            extra: [Follow(speed: 5.0, distance: 50.0)],
+        ),
+    ],
 )
 ```
 
@@ -257,25 +331,25 @@ spawn_level_from_data_internal()
 
 ## EntityComponent System
 
-Doors (and potentially other entities) can have extra components added via the `extra` field in RON:
+Doors and NPCs can have extra components added via the `extra` field in RON:
 
 ```rust
 // Defined in level_schema.rs
 pub enum EntityComponent {
     Roam { speed: f32, range: f32 },
-    // Add more variants as needed
+    Follow { speed: f32, distance: f32 },
 }
 ```
 
 **How it works:**
-1. RON file defines `extra: [Roam(speed: 30.0, range: 100.0)]`
-2. `spawn_door_from_data()` spawns the door entity
+1. RON file defines `extra: [Follow(speed: 5.0, distance: 50.0)]`
+2. `spawn_door_from_data()` or `spawn_npc_from_data()` spawns the entity
 3. Loops through `extra`, matches on each `EntityComponent`
 4. Inserts the corresponding Bevy component via `commands.entity(id).insert(...)`
 
 **Adding new behaviors:**
 1. Add variant to `EntityComponent` enum in `level_schema.rs`
-2. Add match arm in `spawn_door_from_data()` in `level.rs`
+2. Add match arm in `spawn_door_from_data()` and/or `spawn_npc_from_data()` in `level.rs`
 3. Use it in RON files
 
 ## Shutdown

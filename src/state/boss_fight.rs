@@ -2,7 +2,6 @@
 use bevy::prelude::*;
 use rand::Rng;
 use crate::art::SCARY_DOOR_ART;
-use crate::hitbox::HitBox;
 use crate::level_entity::LevelEntity;
 use crate::level::spawn_wall_at;
 use crate::player::Player;
@@ -15,9 +14,6 @@ pub struct PlayerArena {
     pub height: f32,
     pub width: f32,
 }
-
-#[derive(Component)]
-pub struct ArenaBorder;
 
 #[derive(Component)]
 pub struct Boss;
