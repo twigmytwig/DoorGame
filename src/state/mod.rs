@@ -142,7 +142,7 @@ fn toggle_pause( // ALSO HANDLES RESTARTING GAME TODO: DONT PUT RESTART LOGIC IN
                 story_flags.set("duck_present", FlagValue::Bool(true));
                 story_flags.set("duck_health", FlagValue::Number(3));
                 // Reset to first level
-                current_level.level_id = "level_01_intro".to_string();
+                current_level.level_id = "level_00_opening".to_string();
                 current_level.loaded = false;
                 // Go to LoadingNewLevel to reload
                 next_state.set(GameState::LoadingNewLevel);

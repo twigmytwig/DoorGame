@@ -9,10 +9,6 @@
 
     // Dialogue plays when entering the room (optional - omit or empty for no dialogue)
     dialogue: [
-        (speaker: "---", text: "You awaken in a dimly lit room.."),
-        (speaker: "---", text: "Two doors stand before you."),
-        (speaker: "---", text: "Theres also a duck for some reason."),
-        (speaker: "Duck", text: "Finally, you're awake.."),
         (speaker: "Duck", text: "Listen we need to get out of here. The only way out is to choose a door.."),
         (speaker: "Duck", text: "Only problem is when you choose a door, you cant come back.."),
         (speaker: "Duck", text: "Alright, lead the way"),
@@ -48,5 +44,5 @@
         (name: "duck", position: (100.0, 200.0), extra: [Follow(speed: 5.0, distance: 50.0)]),
     ],
 
-    music: Some("Claude debussy_Clair de lune (8-Bit)"),
+    music: Some("Melancholic Walk"),
 )

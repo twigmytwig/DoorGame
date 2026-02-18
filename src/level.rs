@@ -36,7 +36,7 @@ pub struct CurrentLevel {
 impl Default for CurrentLevel {
     fn default() -> Self {
         Self {
-            level_id: "level_01_intro".to_string(),
+            level_id: "level_00_opening".to_string(),
             handle: Handle::default(),
             loaded: false,
         }
@@ -88,6 +88,7 @@ pub fn spawn_level_from_data_internal(
     ));
     info!("Spawned player at ({}, {})", level_data.player_start.0, level_data.player_start.1);
 }
+
 
 fn spawn_border_walls_internal(commands: &mut Commands, windows: &Query<&Window>) {
     let Ok(window) = windows.single() else { return; };

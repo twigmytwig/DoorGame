@@ -1,0 +1,37 @@
+(
+    id: "intro",
+    name: "The Beginning",
+
+    // Room type: "square" uses border walls, "cave" uses cellular automata
+    room_type: "cave",
+
+    player_start: (0.0, -200.0),
+
+    // Dialogue plays when entering the room (optional - omit or empty for no dialogue)
+    dialogue: [
+        (speaker: "@", text: "No no no no.. I have to get out of here"),
+    ],
+
+    // Doors in this room
+    doors: [
+        (
+            position: (100.0, 200.0),
+            leads_to: "level_00_3",
+            label: "Left Door",
+            locked: false,
+            key_required: None,
+        )
+    ],
+
+    // Boss fight (optional - omit or None for no boss)
+    boss: None,
+
+    // Items in the room (optional)
+    items: [],
+
+    // NPCs in the room
+    npcs: [
+    ],
+
+    music: Some("Melancholic Walk"),
+)
