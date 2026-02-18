@@ -13,6 +13,7 @@ cargo run
 main.rs
     │
     ├── DefaultPlugins (window, input, rendering)
+    ├── CurrentMusic resource (audio state)
     ├── StatePlugin (game state machine)
     ├── CameraPlugin (camera + follow system)
     ├── HitBoxPlugin (collision detection)
@@ -73,6 +74,7 @@ main.rs
 - `check_new_level_ready()` - Polls `Assets<LevelData>` until loaded, then:
   - Stores data in `LoadedLevelData` resource
   - Calls `spawn_level_from_data_internal()` to spawn walls, doors, player
+  - Handles level music (play/stop based on `level_data.music`)
   - Transitions based on level type:
     - Has dialogue → `Dialogue`
     - Boss level (`room_type: "boss"`) → `BossFight`
@@ -198,6 +200,11 @@ spawn_level_from_data_internal()
     ├── Spawns doors from level_data.doors (with extra components)
     ├── Spawns NPCs from level_data.npcs (checks StoryFlags for presence)
     └── Spawns player at level_data.player_start
+            │
+            ▼
+Handle level music
+    ├── level_data.music = Some(track) → play_music(track)
+    └── level_data.music = None → stop_music()
 ```
 
 ## Story Flags System
@@ -244,6 +251,94 @@ Duck entity despawned
 Next level: duck doesn't spawn, Duck dialogue skipped
 ```
 
+## Audio System
+
+**File:** `audio.rs`
+
+The audio system handles background music that persists across level transitions.
+
+### CurrentMusic Resource
+
+```rust
+pub struct CurrentMusic {
+    pub entity: Option<Entity>,  // The audio entity
+    pub track: Option<String>,   // Track name currently playing
+}
+```
+
+### How Music Works
+
+1. Each level can specify a `music` field in its RON file:
+   - `music: Some("track_name")` - plays that track
+   - `music: None` - stops music (silence)
+
+2. When loading a level (`check_new_level_ready()`):
+   - If level has music and it's **different** from current → switch tracks
+   - If level has music and it's **same** as current → music continues uninterrupted
+   - If level has `None` → stop music
+
+3. Music files are loaded from `assets/sounds/music/{track_name}.mp3`
+
+### Functions
+
+| Function | Purpose |
+|----------|---------|
+| `play_music()` | Start/switch music (skips if same track playing) |
+| `stop_music()` | Stop current music and clear track state |
+| `play_sfx()` | Play one-shot sound effect |
+
+### Level Music Flow
+
+```
+Level 1 (music: "exploration")
+    │
+    ▼
+play_music("exploration") → starts playing
+    │
+    ▼
+Level 2 (music: "exploration")  ← same track
+    │
+    ▼
+play_music("exploration") → NO-OP (already playing)
+    │
+    ▼
+Boss Level (music: "boss_theme")  ← different track
+    │
+    ▼
+play_music("boss_theme") → stops old, starts new
+    │
+    ▼
+Silent Level (music: None)
+    │
+    ▼
+stop_music() → music stops
+```
+
+### RON Level Music Examples
+
+```ron
+// Exploration levels share the same track
+(
+    id: "level_01",
+    music: Some("Claude debussy_Clair de lune (8-Bit)"),
+    ...
+)
+
+// Boss level with different music
+(
+    id: "boss_test",
+    music: Some("Playboi Carti - Magnolia (Official Video)"),
+    ...
+)
+
+// Silent level
+(
+    id: "quiet_room",
+    music: None,
+    ...
+)
+```
+
 ## Key Resources
 
 | Resource | Purpose |
@@ -254,6 +349,7 @@ Next level: duck doesn't spawn, Duck dialogue skipped
 | `PlayerHealth` | Player's current and max health (default: 3/3) |
 | `AttackTimer` | Boss fight projectile spawn timer + count |
 | `StoryFlags` | HashMap-based persistent game state (NPC status, health, presence) |
+| `CurrentMusic` | Tracks current music entity and track name |
 
 ## Key Components
 
@@ -309,6 +405,7 @@ Next level: duck doesn't spawn, Duck dialogue skipped
             extra: [Follow(speed: 5.0, distance: 50.0)],
         ),
     ],
+    music: Some("exploration"),  // or None for silence
 )
 ```
 
@@ -326,6 +423,7 @@ Next level: duck doesn't spawn, Duck dialogue skipped
     doors: [],  // No doors in boss fights
     boss: Some("test_boss"),
     items: [],
+    music: Some("boss_theme"),  // Boss-specific music
 )
 ```
 
