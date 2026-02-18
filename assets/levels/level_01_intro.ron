@@ -9,6 +9,7 @@
 
     // Dialogue plays when entering the room (optional - omit or empty for no dialogue)
     dialogue: [
+        (speaker: "Duck", text: ""),
         (speaker: "Duck", text: "Listen we need to get out of here. The only way out is to choose a door.."),
         (speaker: "Duck", text: "Only problem is when you choose a door, you cant come back.."),
         (speaker: "Duck", text: "Alright, lead the way"),
