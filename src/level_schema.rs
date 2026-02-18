@@ -21,6 +21,9 @@ pub struct LevelData {
 
     #[serde(default)]
     pub npcs: Vec<NpcData>,
+
+    #[serde(default)]
+    pub music: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

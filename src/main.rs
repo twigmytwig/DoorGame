@@ -17,6 +17,7 @@ mod npc;
 mod follow;
 mod story_flags;
 mod audio;
+use crate::audio::CurrentMusic;
 use crate::camera::CameraPlugin;
 use crate::projectile::ProjectilePlugin;
 use crate::door::DoorPlugin;
@@ -35,6 +36,7 @@ fn main() {
         }),
         ..default()
     }))
+    .init_resource::<CurrentMusic>()
     .add_plugins(state::StatePlugin)
     .add_plugins(CameraPlugin)
     .add_plugins(HitBoxPlugin)

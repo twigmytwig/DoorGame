@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::audio::{CurrentMusic, play_music, stop_music};
 use crate::level_entity::LevelEntity;
 use crate::level::{CurrentLevel, LoadedLevelData, spawn_level_from_data_internal};
 use crate::level_schema::LevelData;
@@ -69,6 +70,8 @@ pub fn check_new_level_ready(
     mut next_state: ResMut<NextState<GameState>>,
     windows: Query<&Window>,
     story_flags: Res<StoryFlags>,
+    asset_server: Res<AssetServer>,
+    mut current_music: ResMut<CurrentMusic>,
 ) {
     if current_level.loaded {
         return;
@@ -81,6 +84,12 @@ pub fn check_new_level_ready(
 
         // Spawn the level entities
         spawn_level_from_data_internal(&mut commands, level_data, &windows, &story_flags);
+
+        // Handle level music
+        match &level_data.music {
+            Some(track) => play_music(&mut commands, &asset_server, &mut current_music, track),
+            None => stop_music(&mut commands, &mut current_music),
+        }
 
         // Transition based on dialogue and level type
         if !level_data.dialogue.is_empty() {

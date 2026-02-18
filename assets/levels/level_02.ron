@@ -50,4 +50,6 @@
     npcs: [
         (name: "duck", position: (0.0, 200.0), extra: [Follow(speed: 5.0, distance: 50.0)]),
     ],
+
+    music: Some("Claude debussy_Clair de lune (8-Bit)"),
 )
