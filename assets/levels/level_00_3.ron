@@ -3,9 +3,9 @@
     name: "The Beginning",
 
     // Room type: "square" uses border walls, "cave" uses cellular automata
-    room_type: "cave",
+    room_type: "square",
 
-    player_start: (0.0, -200.0),
+    player_start: (15.0, 108.0),
 
     // Dialogue plays when entering the room (optional - omit or empty for no dialogue)
     dialogue: [

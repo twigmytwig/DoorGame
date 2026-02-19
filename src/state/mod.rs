@@ -8,7 +8,7 @@ mod loading;
 mod pause;
 mod loading_new_level;
 mod dialogue;
-mod boss_fight;
+pub mod boss_fight;
 mod defeat;
 
 pub use game_state::GameState;
@@ -16,6 +16,8 @@ pub use game_state::GameState;
 use crate::player::PlayerHealth;
 use crate::ui;
 use crate::story_flags::{StoryFlags, FlagValue};
+use crate::level_event::LevelEvent;
+use crate::reaction::{process_reactions, QueuedDialogue};
 
 pub struct StatePlugin;
 
@@ -26,6 +28,10 @@ impl Plugin for StatePlugin {
             .insert_resource(LoadingTimer(Timer::from_seconds(1.0, TimerMode::Once)))
             .init_resource::<dialogue::DialogueState>()
             .init_resource::<StoryFlags>()
+            .init_resource::<QueuedDialogue>()
+            .init_resource::<boss_fight::BossFightInitialized>()
+            .init_resource::<boss_fight::AttackTimer>()
+            .add_message::<LevelEvent>()
             .init_state::<GameState>()
             
             // Loading state systems
@@ -47,13 +53,17 @@ impl Plugin for StatePlugin {
             ).chain())
             .add_systems(OnEnter(GameState::Dialogue), (ui::spawn_health_ui, ui::spawn_follower_health_ui))
             .add_systems(Update, dialogue::advance_dialogue.run_if(in_state(GameState::Dialogue)))
-            .add_systems(OnExit(GameState::Dialogue), dialogue::despawn_dialogue_panel)
+            .add_systems(OnExit(GameState::Dialogue), (
+                dialogue::despawn_dialogue_panel,
+                dialogue::clear_queued_dialogue,
+            ))
 
             // LoadingNewLevel state systems
             .add_systems(OnEnter(GameState::LoadingNewLevel), (
                 loading_new_level::spawn_loading_new_level_screen,
                 loading_new_level::despawn_level_entities,
                 loading_new_level::start_loading_next_level,
+                boss_fight::reset_boss_fight_initialized,
             ))
             .add_systems(Update, (
                 loading_new_level::animate_loading_room,
@@ -86,6 +96,7 @@ impl Plugin for StatePlugin {
                 ui::spawn_follower_health_ui,
             ))
             .add_systems(Update, boss_fight::fire_projectiles_at_player.run_if(in_state(GameState::BossFight)))
+            .add_systems(Update, process_reactions.run_if(in_state(GameState::BossFight)))
 
             // Health UI systems
             .add_systems(Update, ui::update_health_ui.run_if(resource_changed::<PlayerHealth>))

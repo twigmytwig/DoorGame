@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Resource, Default)]
@@ -6,7 +7,7 @@ pub struct StoryFlags {
     flags: HashMap<String, FlagValue>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum FlagValue {
     Bool(bool),
     Text(String),

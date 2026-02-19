@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use crate::story_flags::FlagValue;
 
 #[derive(Asset, TypePath, Debug, Clone, Serialize, Deserialize)]
 pub struct LevelData {
@@ -24,6 +25,9 @@ pub struct LevelData {
 
     #[serde(default)]
     pub music: Option<String>,
+
+    #[serde(default)]
+    pub reactions: Vec<Reaction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,4 +67,31 @@ pub struct NpcData {
     pub position: (f32, f32),
     #[serde(default)]
     pub extra: Vec<EntityComponent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reaction {
+    pub trigger: Trigger,
+    pub actions: Vec<Action>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Trigger {
+    Event(String),
+    EventAndFlag {
+        event: String,
+        flag: String,
+        equals: FlagValue,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Action {
+    DespawnArena,
+    SetFlag { key: String, value: FlagValue },
+    QueueDialogue { lines: Vec<DialogueLine>, then: String },
+    SpawnDoor { position: (f32, f32), leads_to: String, label: String },
+    RestartProjectiles { count: u32 },
+    TransitionToLevel { level_id: String },
+    SetNextLevel { level_id: String },  // Sets level_id without transitioning (use with QueueDialogue then: "LoadingNewLevel")
 }

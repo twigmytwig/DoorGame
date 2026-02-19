@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use crate::level::LoadedLevelData;
 use crate::story_flags::StoryFlags;
+use crate::reaction::QueuedDialogue;
+use crate::level_schema::DialogueLine;
 
 #[derive(Component)]
 pub struct DialoguePanel;
@@ -22,23 +24,31 @@ pub fn spawn_dialogue_panel(
     loaded_data: Res<LoadedLevelData>,
     story_flags: Res<StoryFlags>,
     mut dialogue_state: ResMut<DialogueState>,
+    queued_dialogue: Res<QueuedDialogue>,
 ) {
+    // Get dialogue lines - check QueuedDialogue first, fall back to LoadedLevelData
+    let dialogue_lines: Vec<DialogueLine> = if !queued_dialogue.is_empty() {
+        queued_dialogue.lines.clone()
+    } else if let Some(level_data) = &loaded_data.0 {
+        level_data.dialogue.clone()
+    } else {
+        Vec::new()
+    };
+
     // Get first dialogue line that can be spoken, or placeholder if none
-    let (speaker, text) = if let Some(level_data) = &loaded_data.0 {
+    let (speaker, text) = {
         // Find first line from a speaker who can speak
         loop {
-            if dialogue_state.current_line >= level_data.dialogue.len() {
+            if dialogue_state.current_line >= dialogue_lines.len() {
                 break ("".to_string(), "".to_string());
             }
-            let line = &level_data.dialogue[dialogue_state.current_line];
+            let line = &dialogue_lines[dialogue_state.current_line];
             if story_flags.can_speaker_speak(&line.speaker) {
                 break (line.speaker.clone(), line.text.clone());
             }
             info!("Skipping initial dialogue from '{}' (not present)", line.speaker);
             dialogue_state.current_line += 1;
         }
-    } else {
-        ("".to_string(), "No dialogue loaded".to_string())
     };
 
     commands.spawn((
@@ -86,42 +96,67 @@ pub fn advance_dialogue(
     mut body_query: Query<&mut Text, (With<DialogueBodyText>, Without<DialogueSpeakerText>)>,
     mut next_state: ResMut<NextState<crate::state::GameState>>,
     story_flags: Res<StoryFlags>,
+    queued_dialogue: Res<QueuedDialogue>,
 ) {
     if !input.just_pressed(KeyCode::Space) && !input.just_pressed(KeyCode::Enter) {
         return;
     }
 
-    let Some(level_data) = &loaded_data.0 else { return };
+    // Get dialogue lines - check QueuedDialogue first, fall back to LoadedLevelData
+    let dialogue_lines: Vec<DialogueLine> = if !queued_dialogue.is_empty() {
+        queued_dialogue.lines.clone()
+    } else if let Some(level_data) = &loaded_data.0 {
+        level_data.dialogue.clone()
+    } else {
+        return;
+    };
+
+    // Determine next state based on queued dialogue or level data
+    let get_next_state = || -> crate::state::GameState {
+        if !queued_dialogue.is_empty() {
+            // Use the then_state from queued dialogue
+            match queued_dialogue.then_state.as_str() {
+                "Playing" => crate::state::GameState::Playing,
+                "BossFight" => crate::state::GameState::BossFight,
+                "LoadingNewLevel" => crate::state::GameState::LoadingNewLevel,
+                "Dialogue" => crate::state::GameState::Dialogue,
+                _ => {
+                    warn!("Unknown then_state: {}, defaulting to Playing", queued_dialogue.then_state);
+                    crate::state::GameState::Playing
+                }
+            }
+        } else if let Some(level_data) = &loaded_data.0 {
+            if level_data.room_type == "boss" {
+                crate::state::GameState::BossFight
+            } else {
+                crate::state::GameState::Playing
+            }
+        } else {
+            crate::state::GameState::Playing
+        }
+    };
 
     dialogue_state.current_line += 1;
 
     // Check if we've exhausted all dialogue
-    if dialogue_state.current_line >= level_data.dialogue.len() {
-        if level_data.room_type == "boss" {
-            info!("Dialogue finished, transitioning to BossFight");
-            next_state.set(crate::state::GameState::BossFight);
-        } else {
-            info!("Dialogue finished, transitioning to Playing");
-            next_state.set(crate::state::GameState::Playing);
-        }
+    if dialogue_state.current_line >= dialogue_lines.len() {
+        let target_state = get_next_state();
+        info!("Dialogue finished, transitioning to {:?}", target_state);
+        next_state.set(target_state);
         return;
     }
 
     // Skip dialogue from NPCs that can't speak (dead, traded, not present)
     loop {
         // Check if we've exhausted all dialogue while skipping
-        if dialogue_state.current_line >= level_data.dialogue.len() {
-            if level_data.room_type == "boss" {
-                info!("Dialogue finished (after skipping), transitioning to BossFight");
-                next_state.set(crate::state::GameState::BossFight);
-            } else {
-                info!("Dialogue finished (after skipping), transitioning to Playing");
-                next_state.set(crate::state::GameState::Playing);
-            }
+        if dialogue_state.current_line >= dialogue_lines.len() {
+            let target_state = get_next_state();
+            info!("Dialogue finished (after skipping), transitioning to {:?}", target_state);
+            next_state.set(target_state);
             return;
         }
 
-        let line = &level_data.dialogue[dialogue_state.current_line];
+        let line = &dialogue_lines[dialogue_state.current_line];
 
         if story_flags.can_speaker_speak(&line.speaker) {
             break; // This speaker can speak, show their line
@@ -133,7 +168,7 @@ pub fn advance_dialogue(
     }
 
     // Update the text to show the valid line
-    let line = &level_data.dialogue[dialogue_state.current_line];
+    let line = &dialogue_lines[dialogue_state.current_line];
 
     for mut text in speaker_query.iter_mut() {
         **text = line.speaker.clone();
@@ -156,4 +191,11 @@ pub fn despawn_dialogue_panel(
     }
 
     info!("Dialogue panel despawned");
+}
+
+pub fn clear_queued_dialogue(mut queued_dialogue: ResMut<QueuedDialogue>) {
+    if !queued_dialogue.is_empty() {
+        info!("Clearing queued dialogue");
+        queued_dialogue.clear();
+    }
 }

@@ -21,4 +21,44 @@
     ],
 
     music: Some("Playboi Carti - Magnolia (Official Video)"),
+
+    reactions: [
+        // Phase 1 complete -> Dialogue -> Phase 2
+        (
+            trigger: EventAndFlag(event: "ProjectilesDone", flag: "boss_phase", equals: Number(1)),
+            actions: [
+                QueueDialogue(
+                    lines: [
+                        (speaker: "SCARY DOOR", text: "Not bad... but you won't survive THIS!"),
+                    ],
+                    then: "BossFight",
+                ),
+                SetFlag(key: "boss_phase", value: Number(2)),
+                RestartProjectiles(count: 20),
+            ],
+        ),
+        // Phase 2 complete -> Despawn arena -> Phase 3 (no walls!)
+        (
+            trigger: EventAndFlag(event: "ProjectilesDone", flag: "boss_phase", equals: Number(2)),
+            actions: [
+                DespawnArena,
+                SetFlag(key: "boss_phase", value: Number(3)),
+                RestartProjectiles(count: 10),
+            ],
+        ),
+        // Phase 3 complete -> Final dialogue -> Next level
+        (
+            trigger: EventAndFlag(event: "ProjectilesDone", flag: "boss_phase", equals: Number(3)),
+            actions: [
+                SetNextLevel(level_id: "level_02"),
+                QueueDialogue(
+                    lines: [
+                        (speaker: "SCARY DOOR", text: "Impossible... you've bested me..."),
+                        (speaker: "Duck", text: "WE DID IT! Let's get out of here!"),
+                    ],
+                    then: "LoadingNewLevel",
+                ),
+            ],
+        ),
+    ],
 )

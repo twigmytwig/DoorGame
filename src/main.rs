@@ -17,6 +17,8 @@ mod npc;
 mod follow;
 mod story_flags;
 mod audio;
+mod level_event;
+mod reaction;
 use crate::audio::CurrentMusic;
 use crate::camera::CameraPlugin;
 use crate::projectile::ProjectilePlugin;
